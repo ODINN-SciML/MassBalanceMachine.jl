@@ -1,3 +1,12 @@
+name = "Mimir"
+uuid = "c5446581-5e0b-43af-a4c1-9d0e5e387295"
+authors = ["Jordi Bolibar"]
+version = "0.1.0"
+
 [deps]
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[compat]
+Lux = "1.29.4"
+Random = "1.11.0"
