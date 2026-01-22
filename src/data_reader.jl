@@ -16,6 +16,7 @@ function load_data(csv_filepath::String, json_filepath::String; target_col::Stri
     # Load JSON file to get feature names
     json_data = JSON.parsefile(json_filepath)
     feature_cols = json_data["inputs"]
+    norm = json_data["norm"] 
     
     # Load CSV file
     df = CSV.read(csv_filepath, DataFrame)
@@ -31,15 +32,14 @@ function load_data(csv_filepath::String, json_filepath::String; target_col::Stri
     
     # Extract features using columns from JSON
     feature_symbols = Symbol.(feature_cols)
-    features = Matrix(df[!, feature_symbols])'  # Transpose to (n_features, n_samples)
     
     # Normalize features
-    @infiltrate
     if normalize
-        normalize!(df, feature_symbols)
+        normalize!(df, feature_symbols, norm)
     end
     
     # Convert to Float32
+    features = Matrix(df[!, feature_symbols])'  # Transpose to (n_features, n_samples)
     features = Float32.(features)
     targets = Float32.(targets)
     
@@ -55,15 +55,11 @@ Normalize specified feature columns in the DataFrame to the range [0, 1].
 - `df::DataFrame`: Input DataFrame
 - `feature_symbols::Vector{Symbol}`: Vector of column symbols to normalize
 """
-function normalize!(df::DataFrame, feature_symbols::Vector{Symbol})
-    for sym in feature_symbols
+function normalize!(df::DataFrame, feature_symbols::Vector{Symbol}, norm)
+    for (sym, bounds)in zip(feature_symbols, norm)
         feature = Float64.(df[!, sym])
-        min = minimum(feature)
-        max = maximum(feature)
-        if max == min
-            df[!, sym] = zeros(length(feature))  # constant column -> zeros
-        else
-            df[!, sym] = (feature .- min) ./ (max - min)
-        end
+        min = bounds[1]
+        max = bounds[2]
+        df[!, sym] = (feature .- min) ./ (max - min)
     end
 end

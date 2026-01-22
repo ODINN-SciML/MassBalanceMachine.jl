@@ -15,7 +15,7 @@ model_json_path = joinpath(@__DIR__, "..", "data", "nongeo_20260120_165148_norwa
 
 # Load data using model.json to get feature columns
 csv_path = joinpath(@__DIR__, "..", "data", "sample_data_norway_before_norm.csv")
-features, targets, feature_cols = load_data(csv_path, model_json_path, target_col="y")
+features, targets, feature_cols = load_data(csv_path, model_json_path, target_col="y"; normalize=true)
 
 println("Loaded data from CSV:")
 println("  Features shape: $(size(features))")
@@ -39,7 +39,7 @@ println("  Momentum: $(custom_nn.momentum)")
 println("  Device: $(custom_nn.device)")
 
 # Make predictions using the first batch of data
-batch_size = 32
+batch_size = custom_nn.batch_size
 x_batch = features[:, 1:batch_size]  # First 32 samples
 
 # Forward pass through the model
