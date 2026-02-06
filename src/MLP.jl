@@ -97,6 +97,7 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
         layer_names = keys(x)  # Get all layer names
         n_layers = length(layer_names)
 
+        @infiltrate
         # Iterate in steps of 2 to skip activation layers
         for i in 1:2:n_layers
             layer_name = layer_names[i]
@@ -109,17 +110,17 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
 
                 updates = Dict{Symbol,Any}()
 
-                if haskey(flat, "model.$idx_str.weight") && hasproperty(layer, :weight)
+                if haskey(flat, "$idx_str.weight") && hasproperty(layer, :weight)
                     println("Injecting weights for layer $idx_str")
-                    w_json = _json_to_array(flat["model.$idx_str.weight"])
+                    w_json = _json_to_array(flat["$idx_str.weight"])
                     w_json = Float32.(w_json)
                     @assert size(w_json) == size(layer.weight) "Weight shape mismatch at layer $idx_str: JSON $(size(w_json)) vs Lux $(size(layer.weight))"
                     updates[:weight] = w_json
                 end
 
-                if haskey(flat, "model.$idx_str.bias") && hasproperty(layer, :bias)
+                if haskey(flat, "$idx_str.bias") && hasproperty(layer, :bias)
                     println("Injecting bias for layer $idx_str")
-                    b_json = _json_to_array(flat["model.$idx_str.bias"])
+                    b_json = _json_to_array(flat["$idx_str.bias"])
                     b_json = Float32.(b_json)
                     @assert size(b_json) == size(layer.bias) "Bias shape mismatch at layer $idx_str: JSON $(size(b_json)) vs Lux $(size(layer.bias))"
                     updates[:bias] = b_json
@@ -164,9 +165,8 @@ end
 function _extract_layer_sizes_from_json(flat::Union{Dict, JSON.Object})
     layers = []
     idx = 0
-    
-    while haskey(flat, "model.$idx.weight")
-        w = flat["model.$idx.weight"]
+    while haskey(flat, "$idx.weight")
+        w = flat["$idx.weight"]
         if w isa AbstractArray && !isempty(w)
             if w[1] isa AbstractArray
                 out_features = length(w)
