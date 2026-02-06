@@ -1,8 +1,8 @@
-using Mimir
+using MassBalanceMachine
 using Test
 using Random
 
-@testset "Mimir Tests" begin
+@testset "MassBalanceMachine Tests" begin
     @testset "MLP Creation" begin
         nNeurons = [10, 8]
         model = MLP(nNeurons)

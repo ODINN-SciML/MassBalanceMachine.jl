@@ -1,4 +1,4 @@
-module Mimir
+module MassBalanceMachine
 
 using Lux
 using Random

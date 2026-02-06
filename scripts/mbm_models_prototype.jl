@@ -2,7 +2,7 @@ import Pkg
 Pkg.activate(dirname(Base.current_project()))
 
 using Revise
-using Mimir
+using MassBalanceMachine
 using Random, Statistics
 using JSON
 
