@@ -1,3 +1,5 @@
+export MLP, CustomMLP
+
 """
     MLP(nNeurons::Vector, activation=relu)
 
@@ -9,7 +11,7 @@ A simple feedforward neural network built dynamically based on layer sizes.
 - `activation`: Activation function to use between layers (default: `relu`)
   Example: `relu`, `tanh`, `sigmoid`, `gelu`, etc.
 """
-function MLP(nNeurons::Vector, activation=relu)
+function MLP(nNeurons::Vector{Int}, activation=relu)
     @assert length(nNeurons) >= 2 "nNeurons must have at least 2 elements"
     
     layers = []
@@ -70,6 +72,79 @@ struct CustomMLP
 end
 
 """
+    CustomMLP(params_json::String, model_json::String)
+
+Create a CustomMLP by loading all configuration from JSON files.
+
+# Arguments
+- `params_json::String`: Path to params.json file containing training hyperparameters and network architecture
+- `model_json::String`: Path to model.json file containing input feature names
+
+# Returns
+- `CustomMLP`: Fully configured custom MLP instance
+"""
+function CustomMLP(params_json::String, model_json::String)
+    # Load params.json for architecture and training config
+    params_data = JSON.parsefile(params_json)
+    
+    # Load model.json for input features and (optionally) weights
+    model_data = JSON.parsefile(model_json)
+    
+    # Extract input features from model.json
+    input_features = model_data["inputs"]
+    nbFeatures = length(input_features)
+    
+    # Extract network architecture from params.json
+    model_config = params_data["model"]
+    hidden_layers = model_config["layers"]
+    nNeurons = vcat(nbFeatures, hidden_layers..., 1)
+    
+    # Extract training configuration from params.json
+    training_config = params_data["training"]
+    batch_size = training_config["batch_size"]
+    optimizer = training_config["optim"]
+    learning_rate = Float32(training_config["lr"])
+    nepochs = training_config["Nepochs"]
+    beta1 = Float32(training_config["beta1"])
+    beta2 = Float32(training_config["beta2"])
+    weight_decay = Float32(training_config["weight_decay"])
+    momentum = Float32(training_config["momentum"])
+    
+    # Device configuration
+    device = get(training_config, "device", "cpu")
+    shuffle = get(training_config, "shuffle", true)
+    
+    # Create the model with relu activation
+    model = MLP(nNeurons, relu)
+    
+    # Initialize parameters and state
+    rng = Random.default_rng()
+    params, state = Lux.setup(rng, model)
+    
+    # Direct injection using JSON parsed data
+    params = inject_weights_from_json(params, model_data)
+    
+    return CustomMLP(
+        model,
+        nbFeatures,
+        nNeurons,
+        batch_size,
+        relu,
+        device,
+        shuffle,
+        optimizer,
+        learning_rate,
+        nepochs,
+        beta1,
+        beta2,
+        weight_decay,
+        momentum,
+        params,
+        state
+    )
+end
+
+"""
     inject_weights_from_json(params_nt::NamedTuple, model_data::Dict)
 
 Inject weights and biases from JSON model data directly into params NamedTuple.
@@ -97,7 +172,6 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
         layer_names = keys(x)  # Get all layer names
         n_layers = length(layer_names)
 
-        @infiltrate
         # Iterate in steps of 2 to skip activation layers
         for i in 1:2:n_layers
             layer_name = layer_names[i]
@@ -224,75 +298,3 @@ function _json_to_array(x)
     return Float32.((hcat([Float32.(row) for row in x]...))')
 end
 
-"""
-    CustomMLP(params_json::String, model_json::String)
-
-Create a CustomMLP by loading all configuration from JSON files.
-
-# Arguments
-- `params_json::String`: Path to params.json file containing training hyperparameters and network architecture
-- `model_json::String`: Path to model.json file containing input feature names
-
-# Returns
-- `CustomMLP`: Fully configured custom MLP instance
-"""
-function CustomMLP(params_json::String, model_json::String)
-    # Load params.json for architecture and training config
-    params_data = JSON.parsefile(params_json)
-    
-    # Load model.json for input features and (optionally) weights
-    model_data = JSON.parsefile(model_json)
-    
-    # Extract input features from model.json
-    input_features = model_data["inputs"]
-    nbFeatures = length(input_features)
-    
-    # Extract network architecture from params.json
-    model_config = params_data["model"]
-    hidden_layers = model_config["layers"]
-    nNeurons = vcat(nbFeatures, hidden_layers..., 1)
-    
-    # Extract training configuration from params.json
-    training_config = params_data["training"]
-    batch_size = training_config["batch_size"]
-    optimizer = training_config["optim"]
-    learning_rate = Float32(training_config["lr"])
-    nepochs = training_config["Nepochs"]
-    beta1 = Float32(training_config["beta1"])
-    beta2 = Float32(training_config["beta2"])
-    weight_decay = Float32(training_config["weight_decay"])
-    momentum = Float32(training_config["momentum"])
-    
-    # Device configuration
-    device = get(training_config, "device", "cpu")
-    shuffle = get(training_config, "shuffle", true)
-    
-    # Create the model with relu activation
-    model = MLP(nNeurons, relu)
-    
-    # Initialize parameters and state
-    rng = Random.default_rng()
-    params, state = Lux.setup(rng, model)
-    
-    # Direct injection using JSON parsed data
-    params = inject_weights_from_json(params, model_data)
-    
-    return CustomMLP(
-        model,
-        nbFeatures,
-        nNeurons,
-        batch_size,
-        relu,
-        device,
-        shuffle,
-        optimizer,
-        learning_rate,
-        nepochs,
-        beta1,
-        beta2,
-        weight_decay,
-        momentum,
-        params,
-        state
-    )
-end

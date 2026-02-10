@@ -1,3 +1,5 @@
+export load_data, load_params_from_json, verify_normalized_features, normalize!
+
 """
     load_data(csv_filepath::String, json_filepath::String; target_col::String="y")
 
@@ -97,9 +99,11 @@ function verify_normalized_features(csv_filepath::String, json_filepath::String,
             println("Reference features: $(reference_features[i])")
             println("Generated features: $generated_features")
             @warn "Normalized features do not match the reference file at index $i"
+            return false
         end
     end
 
     println("\nNormalized features match the reference file.")
+    return true
 end
    
