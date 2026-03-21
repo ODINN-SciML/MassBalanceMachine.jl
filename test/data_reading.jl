@@ -68,6 +68,7 @@
             JSON.print(f, reference_data_mismatch)
         end
 
+        # Test that a warning is issued when features do not match the reference file
         @test_logs (:warn,) verify_normalized_features(csv_path, json_path, reference_path, target_col="y")
     end
 

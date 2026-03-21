@@ -6,8 +6,18 @@ using CSV
 using DataFrames
 using JSON
 using Infiltrator
+using Reexport
+@reexport using Muninn
+
+# ##############################################
+# ############    PARAMETERS     ###############
+# ##############################################
+
+cd(@__DIR__)
+const global root_dir::String = dirname(Base.current_project())
 
 include("MLP.jl")
+include("mass_balance_utils.jl")
 include("data_reader.jl")
 
 end

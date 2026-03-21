@@ -1,5 +1,7 @@
 export MLP, CustomMLP
 
+abstract type MLmodel <: MBmodel end
+
 """
     MLP(nNeurons::Vector, activation=relu)
 
@@ -52,10 +54,10 @@ All configuration is automatically loaded from JSON files.
 - `params::NamedTuple`: Model parameters
 - `state::NamedTuple`: Model state
 """
-struct CustomMLP
+struct CustomMLP <: MLmodel
     model::Lux.AbstractLuxLayer
     nbFeatures::Int
-    nNeurons::Vector
+    nNeurons::Vector{Int}
     batch_size::Int
     activation::Function
     device::String
@@ -67,6 +69,8 @@ struct CustomMLP
     beta2::Float32
     weight_decay::Float32
     momentum::Float32
+    input_features::Vector{String}
+    norm::Union{Nothing, Vector{Tuple{Float32, Float32}}}
     params::NamedTuple
     state::NamedTuple
 end
@@ -85,34 +89,36 @@ Create a CustomMLP by loading all configuration from JSON files.
 """
 function CustomMLP(params_json::String, model_json::String)
     # Load params.json for architecture and training config
-    params_data = JSON.parsefile(params_json)
+    params_data = convert(Dict{String, Any}, JSON.parsefile(params_json))
     
     # Load model.json for input features and (optionally) weights
-    model_data = JSON.parsefile(model_json)
+    model_data = convert(Dict{String, Any}, JSON.parsefile(model_json))
     
-    # Extract input features from model.json
-    input_features = model_data["inputs"]
+    input_features = _extract_input_features(model_data, params_data)
     nbFeatures = length(input_features)
     
     # Extract network architecture from params.json
-    model_config = params_data["model"]
-    hidden_layers = model_config["layers"]
+    model_config = convert(Dict{String, Any}, params_data["model"]::Any)
+    hidden_layers = convert(Vector{Int}, model_config["layers"]::Vector{Any})
     nNeurons = vcat(nbFeatures, hidden_layers..., 1)
     
     # Extract training configuration from params.json
-    training_config = params_data["training"]
-    batch_size = training_config["batch_size"]
-    optimizer = training_config["optim"]
-    learning_rate = Float32(training_config["lr"])
-    nepochs = training_config["Nepochs"]
-    beta1 = Float32(training_config["beta1"])
-    beta2 = Float32(training_config["beta2"])
-    weight_decay = Float32(training_config["weight_decay"])
-    momentum = Float32(training_config["momentum"])
+    training_config = convert(Dict{String, Any}, params_data["training"]::Any)
+    batch_size = convert(Int, training_config["batch_size"]::Any)
+    optimizer = convert(String, training_config["optim"]::Any)
+    learning_rate = Float32(convert(Float64, training_config["lr"]::Any))
+    nepochs = convert(Int, training_config["Nepochs"]::Any)
+    beta1 = Float32(convert(Float64, training_config["beta1"]::Any))
+    beta2 = Float32(convert(Float64, training_config["beta2"]::Any))
+    weight_decay = Float32(convert(Float64, training_config["weight_decay"]::Any))
+    momentum = Float32(convert(Float64, training_config["momentum"]::Any))
     
     # Device configuration
-    device = get(training_config, "device", "cpu")
-    shuffle = get(training_config, "shuffle", true)
+    device_val = get(training_config, "device", "cpu")::Any
+    device = convert(String, device_val)
+    shuffle_val = get(training_config, "shuffle", true)::Any
+    shuffle = convert(Bool, shuffle_val)
+    norm = _extract_norm_ranges(model_data, model_config)
     
     # Create the model with relu activation
     model = MLP(nNeurons, relu)
@@ -139,22 +145,68 @@ function CustomMLP(params_json::String, model_json::String)
         beta2,
         weight_decay,
         momentum,
+        input_features,
+        norm,
         params,
         state
     )
 end
 
+function _extract_input_features(
+        model_data::AbstractDict{String, Any},
+        params_data::AbstractDict{String, Any})
+    if haskey(model_data, "inputs")
+        return convert(Vector{String}, model_data["inputs"]::Vector{Any})
+    end
+
+    if haskey(params_data, "model")
+        model_config = convert(Dict{String, Any}, params_data["model"]::Any)
+        if haskey(model_config, "inputs")
+            inputs = String[
+                convert(String, value) for value in model_config["inputs"]::Vector{Any}
+                if value isa AbstractString
+            ]
+            isempty(inputs) || return inputs
+        end
+    end
+
+    error("No input feature list found in model metadata.")
+end
+
+function _extract_norm_ranges(
+        model_data::AbstractDict{String, Any},
+        model_config::AbstractDict{String, Any})
+    raw_norm = if haskey(model_data, "norm")
+        model_data["norm"]
+    elseif haskey(model_config, "norm")
+        model_config["norm"]
+    else
+        nothing
+    end
+
+    raw_norm === nothing && return nothing
+
+    norm_ranges = Tuple{Float32, Float32}[
+        (Float32(bounds[1]), Float32(bounds[2]))
+        for bounds in raw_norm::Vector{Any}
+        if bounds isa Vector{Any} && length(bounds) == 2
+    ]
+
+    isempty(norm_ranges) && return nothing
+    return norm_ranges
+end
+
 """
-    inject_weights_from_json(params_nt::NamedTuple, model_data::Dict)
+    inject_weights_from_json(params_nt::NamedTuple, model_data::AbstractDict{String, Any})
 
 Inject weights and biases from JSON model data directly into params NamedTuple.
 Matches the hierarchical structure of Lux params exactly.
 Verifies consistency between JSON and Lux-generated structure.
 """
-function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object)
+function inject_weights_from_json(params_nt::NamedTuple, model_data::AbstractDict{String, Any})
     !haskey(model_data, "model") && return params_nt
     
-    flat = model_data["model"]
+    flat = convert(Dict{String, Any}, model_data["model"])
     dense_idx = Ref(0)
     
     # Extract expected layer sizes from JSON
@@ -168,7 +220,7 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
     
     # Recursively walk params_nt and inject JSON values in order
     function recursively_inject_weights(x::NamedTuple)
-        updated_layers = Dict{Symbol,Any}()
+        updated_layers = Dict{Symbol, Any}()
         layer_names = keys(x)  # Get all layer names
         n_layers = length(layer_names)
 
@@ -176,26 +228,22 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
         for i in 1:2:n_layers
             layer_name = layer_names[i]
             layer = x[layer_name]
-            println("Visiting layer: $layer_name")
 
             if layer isa NamedTuple && (hasproperty(layer, :weight) || hasproperty(layer, :bias))
-                println("Processing layer: $layer_name")
                 idx_str = string(dense_idx[])
 
-                updates = Dict{Symbol,Any}()
+                updates = Dict{Symbol, AbstractArray{Float32}}()
 
                 if haskey(flat, "$idx_str.weight") && hasproperty(layer, :weight)
-                    println("Injecting weights for layer $idx_str")
-                    w_json = _json_to_array(flat["$idx_str.weight"])
-                    w_json = Float32.(w_json)
+                    w_json_raw = convert(Vector{Vector{Float64}}, flat["$idx_str.weight"]::Any)
+                    w_json = _json_to_array(w_json_raw)
                     @assert size(w_json) == size(layer.weight) "Weight shape mismatch at layer $idx_str: JSON $(size(w_json)) vs Lux $(size(layer.weight))"
                     updates[:weight] = w_json
                 end
 
                 if haskey(flat, "$idx_str.bias") && hasproperty(layer, :bias)
-                    println("Injecting bias for layer $idx_str")
-                    b_json = _json_to_array(flat["$idx_str.bias"])
-                    b_json = Float32.(b_json)
+                    b_json_raw = convert(Vector{Float64}, flat["$idx_str.bias"]::Any)
+                    b_json = _json_to_array(b_json_raw)
                     @assert size(b_json) == size(layer.bias) "Bias shape mismatch at layer $idx_str: JSON $(size(b_json)) vs Lux $(size(layer.bias))"
                     updates[:bias] = b_json
                 end
@@ -204,7 +252,15 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
                     @error "No matching weights or biases found in JSON for layer $idx_str"
                 end
 
-                updated_layer = merge(layer, (updates...,))
+                # Manually construct updated layer
+                if hasproperty(layer, :weight) && hasproperty(layer, :bias)
+                    new_weight = haskey(updates, :weight) ? updates[:weight] : layer.weight
+                    new_bias = haskey(updates, :bias) ? updates[:bias] : layer.bias
+                    updated_layer = (weight = new_weight, bias = new_bias)
+                else
+                    updated_layer = layer
+                end
+
                 updated_layers[layer_name] = updated_layer
 
                 dense_idx[] += 2  # Increment by 2 to skip activation layers
@@ -236,19 +292,14 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::JSON.Object
 end
 
 # Helper: extract layer dimensions (in, out) from JSON weights
-function _extract_layer_sizes_from_json(flat::Union{Dict, JSON.Object})
-    layers = []
+function _extract_layer_sizes_from_json(flat::AbstractDict{String, Any})
+    layers = Tuple{Int, Int}[]
     idx = 0
     while haskey(flat, "$idx.weight")
-        w = flat["$idx.weight"]
-        if w isa AbstractArray && !isempty(w)
-            if w[1] isa AbstractArray
-                out_features = length(w)
-                in_features = length(w[1])
-            else
-                in_features = 1
-                out_features = length(w)
-            end
+        w = convert(Vector{Vector{Float64}}, flat["$idx.weight"]::Any)
+        if !isempty(w)
+            out_features = length(w)
+            in_features = length(w[1])
             push!(layers, (in_features, out_features))
         end
         idx += 2  # Skip by 2 because of activation functions in between
@@ -258,8 +309,8 @@ function _extract_layer_sizes_from_json(flat::Union{Dict, JSON.Object})
 end
 
 # Helper: extract layer dimensions (in, out) from Lux params structure
-function _extract_layer_sizes_from_params(params_nt::NamedTuple)
-    layers = []
+function _extract_layer_sizes_from_params(params_nt::NamedTuple)::Vector{Tuple{Int,Int}}
+    layers = Tuple{Int,Int}[]
     function walk(x)
         if x isa NamedTuple && haskey(x, :weight)
             w = x[:weight]
@@ -280,7 +331,7 @@ function _extract_layer_sizes_from_params(params_nt::NamedTuple)
 end
 
 # Helper: verify JSON and Lux layer structures match
-function _verify_layer_consistency(json_layers::Vector, lux_layers::Vector)
+function _verify_layer_consistency(json_layers::Vector{Tuple{Int,Int}}, lux_layers::Vector{Tuple{Int,Int}})
     @assert length(json_layers) == length(lux_layers) "Layer count mismatch: JSON has $(length(json_layers)) layers, Lux has $(length(lux_layers)) layers.\nJSON layers: $json_layers\nLux layers: $lux_layers"
     
     for (i, (json_layer, lux_layer)) in enumerate(zip(json_layers, lux_layers))
@@ -291,10 +342,11 @@ function _verify_layer_consistency(json_layers::Vector, lux_layers::Vector)
 end
 
 # Helper: convert JSON array to Float32
-function _json_to_array(x)
-    !isa(x, AbstractArray) && return Float32(x)
-    (!isempty(x) && !isa(x[1], AbstractArray)) && return Float32.(x)
-    # 2D: convert rows to matrix
-    return Float32.((hcat([Float32.(row) for row in x]...))')
+function _json_to_array(x::AbstractArray{T}) where T
+    if !isempty(x) && !isa(x[1], AbstractArray)
+        return Float32.(x)
+    else
+        return Float32.((hcat([Float32.(row) for row in x]...))')
+    end
 end
 

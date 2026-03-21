@@ -25,7 +25,8 @@
     # Create model.json content that matches the expected architecture
     # For a network with input size 2, hidden layers [8,8], and output size 1
     model_data = Dict(
-        "inputs" => ["feature1", "feature2"],
+        "inputs" => ["t2m", "tp"],
+        "norm" => [[-20.0, 15.0], [0.0, 0.1]],
         "model" => Dict(
             # First hidden layer (input_size=2, output_size=8)
             "0.weight" => [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8],
@@ -62,6 +63,7 @@
         nNeurons = [2, 8, 8, 1]  # Input, two hidden, output
         model = MLP(nNeurons)
         @test model isa Lux.Chain
+        JET.@test_opt MLP(nNeurons)
     end
     
     @testset "CustomMLP Creation" begin
@@ -73,6 +75,8 @@
         @test custom_nn.device == "cpu"
         @test custom_nn.optimizer == "ADAM"
         @test custom_nn.learning_rate ≈ 0.001
+        @test custom_nn.input_features == ["t2m", "tp"]
+        @test custom_nn.norm == [(Float32(-20.0), Float32(15.0)), (Float32(0.0), Float32(0.1))]
     end
 
     @testset "Weight Injection" begin
@@ -113,6 +117,11 @@
         b3 = custom_nn.params.layer_5.bias
         @test length(b3) == 1
         @test b3[1] ≈ 0.1
+    end
+
+    @testset "Apply ML MB model" begin
+        custom_nn = CustomMLP(params_json_path, model_json_path)
+        apply_MB_test(custom_nn; save_refs=false)
     end
 
     # Clean up temporary files
