@@ -229,6 +229,8 @@ function inject_weights_from_json(params_nt::NamedTuple, model_data::AbstractDic
             layer_name = layer_names[i]
             layer = x[layer_name]
 
+
+            
             if layer isa NamedTuple && (hasproperty(layer, :weight) || hasproperty(layer, :bias))
                 idx_str = string(dense_idx[])
 
