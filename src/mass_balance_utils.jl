@@ -2,6 +2,7 @@ import Muninn: compute_MB, requires_dynamic_topography, topography_window_m, mb_
 
 requires_dynamic_topography(::CustomMLP) = true
 topography_window_m(::CustomMLP) = Sleipnir.Float(200.0)
+Muninn.required_climate_data_source(::CustomMLP) = :ERA5
 
 function mb_inputs(mb_model::CustomMLP)
         inputs = (;)

@@ -9,5 +9,6 @@ using JLD2: load, jldsave
 
 # Include test files
 include("data_reading.jl")
+include("era5_fixture.jl")
 include("MB.jl")
 include("MLPs.jl")

@@ -12,6 +12,8 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     rgi_paths = get_rgi_paths()
     # Filter out glaciers that are not used to avoid having references that depend on all the glaciers processed in Gungnir
     rgi_paths = Dict(k => rgi_paths[k] for k in rgi_ids)
+    rgi_path = joinpath(Sleipnir.prepro_dir, rgi_paths[rgi_ids[1]])
+    ensure_synthetic_era5_fixture(rgi_path)
 
     params = Muninn.Parameters(
         simulation = SimulationParameters(
@@ -20,6 +22,7 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
         use_velocities = false,
         tspan = (2010.0, 2015.0),
         test_mode = true,
+        climate_data_source = :ERA5,
         rgi_paths = rgi_paths),
     )
     JET.@test_opt target_modules=(Sleipnir, Muninn) Muninn.Parameters(
@@ -29,9 +32,11 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
         use_velocities = false,
         tspan = (2010.0, 2015.0),
         test_mode = true,
+        climate_data_source = :ERA5,
         rgi_paths = rgi_paths),
     )
     glacier = initialize_glaciers(rgi_ids, params)[1]
+    @test glacier.climate.climate_data_source == :ERA5
 
     model = Muninn.Model(nothing, custom_nn, nothing) # This test only needs a mass balance model
     JET.@test_opt Muninn.Model(nothing, custom_nn, nothing)

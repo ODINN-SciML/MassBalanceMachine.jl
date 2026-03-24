@@ -79,6 +79,14 @@
         @test custom_nn.norm == [(Float32(-20.0), Float32(15.0)), (Float32(0.0), Float32(0.1))]
     end
 
+    @testset "CustomMLP Climate Source Requirement" begin
+        custom_nn = CustomMLP(params_json_path, model_json_path)
+
+        @test required_climate_data_source(custom_nn) == :ERA5
+        @test_throws ArgumentError validate_climate_data_source(custom_nn, :W5E5)
+        @test isnothing(validate_climate_data_source(custom_nn, :ERA5))
+    end
+
     @testset "Weight Injection" begin
         custom_nn = CustomMLP(params_json_path, model_json_path)
 
