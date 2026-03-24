@@ -1,4 +1,4 @@
-mutable struct fakeIceflowCache{F <: AbstractFloat}
+mutable struct fakeIceflowCache{F<:AbstractFloat}
     MB::Matrix{F}
 end
 
@@ -17,23 +17,25 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
 
     params = Muninn.Parameters(
         simulation = SimulationParameters(
-        use_MB = true,
-        multiprocessing = false,
-        use_velocities = false,
-        tspan = (2010.0, 2015.0),
-        test_mode = true,
-        climate_data_source = :ERA5,
-        rgi_paths = rgi_paths),
+            use_MB = true,
+            multiprocessing = false,
+            use_velocities = false,
+            tspan = (2010.0, 2015.0),
+            test_mode = true,
+            climate_data_source = :ERA5,
+            rgi_paths = rgi_paths,
+        ),
     )
     JET.@test_opt target_modules=(Sleipnir, Muninn) Muninn.Parameters(
         simulation = SimulationParameters(
-        use_MB = true,
-        multiprocessing = false,
-        use_velocities = false,
-        tspan = (2010.0, 2015.0),
-        test_mode = true,
-        climate_data_source = :ERA5,
-        rgi_paths = rgi_paths),
+            use_MB = true,
+            multiprocessing = false,
+            use_velocities = false,
+            tspan = (2010.0, 2015.0),
+            test_mode = true,
+            climate_data_source = :ERA5,
+            rgi_paths = rgi_paths,
+        ),
     )
     glacier = initialize_glaciers(rgi_ids, params)[1]
     @test glacier.climate.climate_data_source == :ERA5

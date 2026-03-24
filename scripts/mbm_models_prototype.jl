@@ -17,7 +17,8 @@ model_json_path = joinpath(@__DIR__, "..", "data", folder, "best_model.json")
 
 # Load data using model.json to get feature columns
 csv_path = joinpath(@__DIR__, "..", "data", folder, "sample_inputs_before_norm.csv")
-features, targets, feature_cols = load_data(csv_path, model_json_path, target_col="y"; normalize=true)
+features, targets, feature_cols =
+    load_data(csv_path, model_json_path, target_col = "y"; normalize = true)
 
 println("Loaded data from CSV:")
 println("  Features shape: $(size(features))")
@@ -28,7 +29,7 @@ println("  Feature columns: $feature_cols")
 reference_json_path = joinpath(@__DIR__, "..", "data", folder, "sample_inputs.json")
 
 # Verify the normalized features
-verify_normalized_features(csv_path, model_json_path, reference_json_path, target_col="y")
+verify_normalized_features(csv_path, model_json_path, reference_json_path, target_col = "y")
 
 # Create CustomMLP with automatic configuration from JSON files
 custom_nn = CustomMLP(params_json_path, model_json_path)
@@ -59,7 +60,7 @@ println("  Output predictions shape: $(size(y_pred))")
 println("  First 5 predictions: $(vec(y_pred)[1:5]), cumulated = $(sum(vec(y_pred)[1:5]))")
 
 # Load the reference data to get the predicted values
-reference_data = JSON.parsefile(reference_json_path; allownan=true)
+reference_data = JSON.parsefile(reference_json_path; allownan = true)
 reference_preds = reference_data["pred"]
 println("  First 5 reference predictions: $(reference_preds[1:5])")
 
