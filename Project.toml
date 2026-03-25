@@ -1,7 +1,7 @@
 name = "MassBalanceMachine"
 uuid = "c5446581-5e0b-43af-a4c1-9d0e5e387295"
-authors = ["Jordi Bolibar"]
 version = "0.1.0"
+authors = ["Jordi Bolibar"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -22,6 +22,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 Dates = "1.11.0"
 JLD2 = "0.6.3"
+JSON = "1"
 Muninn = "0.9.3"
 NCDatasets = "0.14.13"
 Random = "1.11.0"
