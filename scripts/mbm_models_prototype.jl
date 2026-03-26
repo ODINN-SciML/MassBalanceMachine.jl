@@ -67,3 +67,31 @@ println("  First 5 reference predictions: $(reference_preds[1:5])")
 # Compute Mean Squared Error using reference predictions
 mse = mean((vec(y_pred) .- reference_preds[1:batch_size]) .^ 2)
 println("  MSE on batch: $mse")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Model Registry: save to Lux JLD2 and round-trip load
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# After the first JSON-based load the network weights live in pure Lux
+# NamedTuples. We save them to the registry so future loads skip the JSON /
+# weight-injection step entirely.
+
+model_name = "geo_norway_v1"
+
+println("\n── Saving '$model_name' to the model registry ────────────────────────")
+saved_path = save_model(custom_nn, model_name)
+println("  Saved to: $saved_path")
+
+println("\nRegistered models:")
+list_models()
+
+# ── Round-trip: load back from registry and verify predictions match ─────────
+println("\n── Loading '$model_name' from registry (no JSON parsing) ───────────────")
+loaded_nn = load_model(model_name)
+
+y_pred_loaded, _ = loaded_nn.model(x_batch, loaded_nn.params, loaded_nn.state)
+
+max_diff = maximum(abs.(vec(y_pred_loaded) .- vec(y_pred)))
+println("  Max absolute prediction difference (original vs loaded): $max_diff")
+@assert max_diff < 1.0f-5 "Round-trip prediction mismatch (max diff = $max_diff)!"
+println("  ✓ Predictions identical — registry round-trip OK")
