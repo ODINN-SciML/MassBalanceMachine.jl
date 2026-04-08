@@ -8,12 +8,14 @@ end
 
 function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     rgi_ids = ["RGI60-11.03638"]
+    workdir = mktempdir()
 
     rgi_paths = get_rgi_paths()
     # Filter out glaciers that are not used to avoid having references that depend on all the glaciers processed in Gungnir
     rgi_paths = Dict(k => rgi_paths[k] for k in rgi_ids)
-    rgi_path = joinpath(Sleipnir.prepro_dir, rgi_paths[rgi_ids[1]])
-    ensure_synthetic_era5_fixture(rgi_path)
+    # Redirect all rgi_paths to isolated synthetic-test directories so that
+    # real ERA5 files produced by Gungnir are never used in tests.
+    ensure_synthetic_era5_fixture(rgi_paths, rgi_ids)
 
     params = Muninn.Parameters(
         simulation = SimulationParameters(
@@ -21,6 +23,7 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
             multiprocessing = false,
             use_velocities = false,
             tspan = (2010.0, 2015.0),
+            working_dir = workdir,
             test_mode = true,
             climate_data_source = :ERA5,
             rgi_paths = rgi_paths,
@@ -32,6 +35,7 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
             multiprocessing = false,
             use_velocities = false,
             tspan = (2010.0, 2015.0),
+            working_dir = workdir,
             test_mode = true,
             climate_data_source = :ERA5,
             rgi_paths = rgi_paths,
