@@ -37,19 +37,11 @@ custom_nn = CustomMLP(params_json_path, model_json_path)
 println("\nLoaded CustomMLP configuration from JSON files:")
 println("  Input features: $(custom_nn.nbFeatures)")
 println("  Layer sizes: $(custom_nn.nNeurons)")
-println("  Batch size: $(custom_nn.batch_size)")
-println("  Optimizer: $(custom_nn.optimizer)")
-println("  Learning rate: $(custom_nn.learning_rate)")
-println("  Epochs: $(custom_nn.nepochs)")
-println("  Beta1: $(custom_nn.beta1)")
-println("  Beta2: $(custom_nn.beta2)")
-println("  Weight decay: $(custom_nn.weight_decay)")
-println("  Momentum: $(custom_nn.momentum)")
-println("  Device: $(custom_nn.device)")
+println("  Input names: $(custom_nn.input_features)")
 
 # Make predictions using the first batch of data
-batch_size = custom_nn.batch_size
-x_batch = features[:, 1:batch_size]  # First 32 samples
+batch_size = min(size(features, 2), 32)
+x_batch = features[:, 1:batch_size]
 
 # Forward pass through the model
 y_pred, _ = custom_nn.model(x_batch, custom_nn.params, custom_nn.state)

@@ -81,10 +81,6 @@
 
         @test custom_nn.nbFeatures == 2
         @test custom_nn.nNeurons == [2, 8, 8, 1]
-        @test custom_nn.batch_size == 16
-        @test custom_nn.device == "cpu"
-        @test custom_nn.optimizer == "ADAM"
-        @test custom_nn.learning_rate ≈ 0.001
         @test custom_nn.input_features == ["t2m", "tp"]
         @test custom_nn.norm ==
               [(Float32(-20.0), Float32(15.0)), (Float32(0.0), Float32(0.1))]

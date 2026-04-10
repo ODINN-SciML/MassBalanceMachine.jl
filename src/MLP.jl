@@ -33,24 +33,14 @@ end
 """
     CustomMLP
 
-A custom neural network regressor struct that wraps a Lux model with training configuration.
-All configuration is automatically loaded from JSON files.
+A custom neural network regressor struct that wraps a Lux model for inference.
+All required inference metadata is automatically loaded from JSON files.
 
 # Fields
 - `model`: The Lux neural network model
 - `nbFeatures::Int`: Number of input features
 - `nNeurons::Vector`: Layer sizes for the network
-- `batch_size::Int`: Batch size for training
 - `activation`: Activation function
-- `device::String`: Device to run on ("cpu" or "gpu")
-- `shuffle::Bool`: Whether to shuffle training data
-- `optimizer::String`: Optimizer type (e.g., "ADAM", "SGD")
-- `learning_rate::Float32`: Learning rate
-- `nepochs::Int`: Number of training epochs
-- `beta1::Float32`: Beta1 parameter for ADAM
-- `beta2::Float32`: Beta2 parameter for ADAM
-- `weight_decay::Float32`: Weight decay regularization
-- `momentum::Float32`: Momentum for SGD
 - `params::NamedTuple`: Model parameters
 - `state::NamedTuple`: Model state
 """
@@ -58,17 +48,7 @@ struct CustomMLP <: MLmodel
     model::Lux.AbstractLuxLayer
     nbFeatures::Int
     nNeurons::Vector{Int}
-    batch_size::Int
     activation::Function
-    device::String
-    shuffle::Bool
-    optimizer::String
-    learning_rate::Float32
-    nepochs::Int
-    beta1::Float32
-    beta2::Float32
-    weight_decay::Float32
-    momentum::Float32
     input_features::Vector{String}
     norm::Union{Nothing,Vector{Tuple{Float32,Float32}}}
     params::NamedTuple
@@ -78,11 +58,11 @@ end
 """
     CustomMLP(params_json::String, model_json::String)
 
-Create a CustomMLP by loading all configuration from JSON files.
+Create a CustomMLP by loading inference configuration from JSON files.
 
 # Arguments
-- `params_json::String`: Path to params.json file containing training hyperparameters and network architecture
-- `model_json::String`: Path to model.json file containing input feature names
+- `params_json::String`: Path to params.json file containing network architecture
+- `model_json::String`: Path to model.json file containing input feature names and optional normalization bounds
 
 # Returns
 - `CustomMLP`: Fully configured custom MLP instance
@@ -102,22 +82,6 @@ function CustomMLP(params_json::String, model_json::String)
     hidden_layers = convert(Vector{Int}, model_config["layers"]::Vector{Any})
     nNeurons = vcat(nbFeatures, hidden_layers..., 1)
 
-    # Extract training configuration from params.json
-    training_config = convert(Dict{String,Any}, params_data["training"]::Any)
-    batch_size = convert(Int, training_config["batch_size"]::Any)
-    optimizer = convert(String, training_config["optim"]::Any)
-    learning_rate = Float32(convert(Float64, training_config["lr"]::Any))
-    nepochs = convert(Int, training_config["Nepochs"]::Any)
-    beta1 = Float32(convert(Float64, training_config["beta1"]::Any))
-    beta2 = Float32(convert(Float64, training_config["beta2"]::Any))
-    weight_decay = Float32(convert(Float64, training_config["weight_decay"]::Any))
-    momentum = Float32(convert(Float64, training_config["momentum"]::Any))
-
-    # Device configuration
-    device_val = get(training_config, "device", "cpu")::Any
-    device = convert(String, device_val)
-    shuffle_val = get(training_config, "shuffle", true)::Any
-    shuffle = convert(Bool, shuffle_val)
     norm = _extract_norm_ranges(model_data, model_config)
 
     # Create the model with relu activation
@@ -130,26 +94,7 @@ function CustomMLP(params_json::String, model_json::String)
     # Direct injection using JSON parsed data
     params = inject_weights_from_json(params, model_data)
 
-    return CustomMLP(
-        model,
-        nbFeatures,
-        nNeurons,
-        batch_size,
-        relu,
-        device,
-        shuffle,
-        optimizer,
-        learning_rate,
-        nepochs,
-        beta1,
-        beta2,
-        weight_decay,
-        momentum,
-        input_features,
-        norm,
-        params,
-        state,
-    )
+    return CustomMLP(model, nbFeatures, nNeurons, relu, input_features, norm, params, state)
 end
 
 function _extract_input_features(

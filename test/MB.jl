@@ -6,6 +6,9 @@ mutable struct fakeCache{ICEFLOW}
     iceflow::ICEFLOW
 end
 
+const _MB_REF_PATH =
+    joinpath(MassBalanceMachine.root_dir, "test", "data", "MB", "MB_model.jld2")
+
 function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     rgi_ids = ["RGI60-11.03638"]
     workdir = mktempdir()
@@ -62,10 +65,12 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     #     cache, model, glacier, step_MB, t)
 
     if save_refs
-        jldsave(joinpath(Muninn.root_dir, "test/data/MB/MB_model.jld2"); mb)
+        mkpath(dirname(_MB_REF_PATH))
+        jldsave(_MB_REF_PATH; mb)
     end
 
-    mb_ref = load(joinpath(Muninn.root_dir, "test/data/MB/MB_model.jld2"))["mb"]
+    @test isfile(_MB_REF_PATH)
+    mb_ref = load(_MB_REF_PATH)["mb"]
     @test size(mb) == size(glacier.S)
     @test eltype(mb) <: AbstractFloat
     @test all(isfinite, mb)
