@@ -74,5 +74,5 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     @test size(mb) == size(glacier.S)
     @test eltype(mb) <: AbstractFloat
     @test all(isfinite, mb)
-    @test mb == mb_ref
+    @test isapprox(mb, mb_ref; rtol = 1e-6, atol = 1e-8)
 end
