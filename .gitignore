@@ -1,0 +1,9 @@
+.DS_Store
+.vscode/
+.pytest_cache/
+
+# Local model registry (repo-local runtime cache)
+.mbm_registry/
+
+# Test fixtures generated locally; do not commit
+test/data/missing_glaciers.jld2

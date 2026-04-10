@@ -263,25 +263,26 @@ function _extract_layer_sizes_from_json(flat::AbstractDict{String,Any})
     return layers
 end
 
+function walk(x, layers::Vector{Tuple{Int,Int}})
+    if x isa NamedTuple && haskey(x, :weight)
+        w = x[:weight]
+        out_features, in_features = size(w)
+        push!(layers, (in_features, out_features))
+    elseif x isa NamedTuple
+        for v in values(x)
+            walk(v, layers)
+        end
+    elseif x isa Tuple
+        for v in x
+            walk(v, layers)
+        end
+    end
+end
+
 # Helper: extract layer dimensions (in, out) from Lux params structure
 function _extract_layer_sizes_from_params(params_nt::NamedTuple)::Vector{Tuple{Int,Int}}
     layers = Tuple{Int,Int}[]
-    function walk(x)
-        if x isa NamedTuple && haskey(x, :weight)
-            w = x[:weight]
-            out_features, in_features = size(w)
-            push!(layers, (in_features, out_features))
-        elseif x isa NamedTuple
-            for v in values(x)
-                walk(v)
-            end
-        elseif x isa Tuple
-            for v in x
-                walk(v)
-            end
-        end
-    end
-    walk(params_nt)
+    walk(params_nt, layers)
     return layers
 end
 

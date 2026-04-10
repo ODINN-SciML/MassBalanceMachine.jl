@@ -14,7 +14,7 @@ Public API
     delete_model(name)      – remove a named model from the registry
     models_dir()            – path to the on-disk registry directory
 
-The registry lives in `~/.MassBalanceMachine/models/` by default. Each model is
+The registry lives in `<repo>/.mbm_registry/models/` by default. Each model is
 stored as a `<name>.jld2` file and a human-readable `registry.json` index keeps
 track of names, architectures, and when they were saved.
 """
@@ -23,7 +23,7 @@ export save_model, load_model, list_models, delete_model, models_dir
 
 # ─── Registry location ───────────────────────────────────────────────────────
 
-const _DEFAULT_MODELS_DIR = joinpath(homedir(), ".MassBalanceMachine", "models")
+const _DEFAULT_MODELS_DIR = joinpath(MassBalanceMachine.root_dir, ".mbm_registry", "models")
 
 """
     models_dir() -> String

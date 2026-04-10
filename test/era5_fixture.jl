@@ -57,12 +57,14 @@ function write_synthetic_era5_monthly(path::String)
 end
 
 function ensure_synthetic_era5_fixture(rgi_paths::Dict, rgi_ids::Vector{String})
+    fixture_root = mktempdir()
+
     for rgi_id in rgi_ids
         rgi_path = joinpath(Sleipnir.prepro_dir, rgi_paths[rgi_id])
 
-        # Use a dedicated test directory so synthetic data never touches the real prepro directory.
+        # Use a true temporary directory to avoid writing inside Sleipnir.prepro_dir.
         # rgi_path is treated as STRICTLY READ-ONLY: nothing is ever deleted or written there.
-        test_rgi_path = rgi_path * "_synthetic_test"
+        test_rgi_path = joinpath(fixture_root, rgi_id)
         mkpath(test_rgi_path)
 
         # Safety assertion: all writes must stay inside test_rgi_path.
@@ -96,6 +98,8 @@ function ensure_synthetic_era5_fixture(rgi_paths::Dict, rgi_ids::Vector{String})
             end
         end
 
-        rgi_paths[rgi_id] = relpath(test_rgi_path, Sleipnir.prepro_dir)
+        # Absolute path is intentional: callers that join with prepro_dir will still
+        # resolve to this temporary path.
+        rgi_paths[rgi_id] = test_rgi_path
     end
 end
