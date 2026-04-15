@@ -71,3 +71,7 @@
     rm(model_json_path)
     rm(reg_dir; recursive = true)
 end
+
+@testset "Download a MLP from the HuggingFace repository" begin
+    download_MLP("mlp_noSvf_wgms11_small_0.1")
+end

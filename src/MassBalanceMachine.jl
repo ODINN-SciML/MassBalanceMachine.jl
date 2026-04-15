@@ -7,6 +7,7 @@ using DataFrames
 using Dates
 using JLD2
 using JSON
+using Downloads
 using Infiltrator
 using Reexport
 @reexport using Muninn
