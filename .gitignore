@@ -7,3 +7,4 @@
 
 # Test fixtures generated locally; do not commit
 test/data/missing_glaciers.jld2
+Manifest.toml

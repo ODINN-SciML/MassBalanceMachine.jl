@@ -1,4 +1,4 @@
-export MLP, CustomMLP
+export MLP, CustomMLP, download_MLP
 
 abstract type MLmodel <: MBmodel end
 
@@ -184,17 +184,20 @@ function inject_weights_from_json(
                 idx_str = string(dense_idx[])
 
                 updates = Dict{Symbol,AbstractArray{Float32}}()
+                suffix = haskey(flat, "model.0.weight") ? "model." : ""
 
-                if haskey(flat, "$idx_str.weight") && hasproperty(layer, :weight)
-                    w_json_raw =
-                        convert(Vector{Vector{Float64}}, flat["$idx_str.weight"]::Any)
+                if haskey(flat, "$suffix$idx_str.weight") && hasproperty(layer, :weight)
+                    w_json_raw = convert(
+                        Vector{Vector{Float64}},
+                        flat["$suffix$idx_str.weight"]::Any,
+                    )
                     w_json = _json_to_array(w_json_raw)
                     @assert size(w_json) == size(layer.weight) "Weight shape mismatch at layer $idx_str: JSON $(size(w_json)) vs Lux $(size(layer.weight))"
                     updates[:weight] = w_json
                 end
 
-                if haskey(flat, "$idx_str.bias") && hasproperty(layer, :bias)
-                    b_json_raw = convert(Vector{Float64}, flat["$idx_str.bias"]::Any)
+                if haskey(flat, "$suffix$idx_str.bias") && hasproperty(layer, :bias)
+                    b_json_raw = convert(Vector{Float64}, flat["$suffix$idx_str.bias"]::Any)
                     b_json = _json_to_array(b_json_raw)
                     @assert size(b_json) == size(layer.bias) "Bias shape mismatch at layer $idx_str: JSON $(size(b_json)) vs Lux $(size(layer.bias))"
                     updates[:bias] = b_json
@@ -250,8 +253,9 @@ end
 function _extract_layer_sizes_from_json(flat::AbstractDict{String,Any})
     layers = Tuple{Int,Int}[]
     idx = 0
-    while haskey(flat, "$idx.weight")
-        w = convert(Vector{Vector{Float64}}, flat["$idx.weight"]::Any)
+    suffix = haskey(flat, "model.0.weight") ? "model." : ""
+    while haskey(flat, "$suffix$idx.weight")
+        w = convert(Vector{Vector{Float64}}, flat["$suffix$idx.weight"]::Any)
         if !isempty(w)
             out_features = length(w)
             in_features = length(w[1])
@@ -307,4 +311,54 @@ function _json_to_array(x::AbstractArray{T}) where {T}
     else
         return Float32.((hcat([Float32.(row) for row in x]...))')
     end
+end
+
+"""
+    _hf_download(
+        repo_id::AbstractString,
+        revision::AbstractString,
+        path_in_repo::AbstractString;
+        dest::Union{Nothing,String}=nothing
+    )
+
+Download files from a model stored in a HuggingFace repository and associated to the version `revision`.
+The repository is identified by `repo_id` (for example "MassBalanceMachine/MLP").
+The downloaded file is stored in `dest`.
+"""
+function _hf_download(
+    repo_id::AbstractString,
+    revision::AbstractString,
+    path_in_repo::AbstractString;
+    dest::Union{Nothing,String} = nothing,
+)
+    url = "https://huggingface.co/$(repo_id)/resolve/$(revision)/$(path_in_repo)"
+    dest === nothing && (dest = basename(path_in_repo))
+    mkpath(dirname(dest))
+    Downloads.download(url, dest)
+    return dest
+end
+
+"""
+    download_MLP(revision::String)
+
+Download the version `revision` of the MLP from the HuggingFace repository and store it in the registry.
+"""
+function download_MLP(revision::String)
+    tempdir = mktempdir()
+    path_params = _hf_download(
+        "MassBalanceMachine/MLP",
+        revision,
+        "params.json",
+        dest = "$(tempdir)/params.json",
+    )
+    path_model = _hf_download(
+        "MassBalanceMachine/MLP",
+        revision,
+        "model.json",
+        dest = "$(tempdir)/model.json",
+    )
+    # Build the model
+    mlp = CustomMLP(path_params, path_model)
+    # Store it in the registry
+    save_model(mlp, revision)
 end
