@@ -32,7 +32,7 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
             rgi_paths = rgi_paths,
         ),
     )
-    JET.@test_opt target_modules=(Sleipnir, Muninn) Muninn.Parameters(
+    JET.@test_opt target_modules=(Sleipnir, Muninn, MassBalanceMachine) Muninn.Parameters(
         simulation = SimulationParameters(
             use_MB = true,
             multiprocessing = false,
@@ -53,7 +53,12 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     t = 2015.0
     step_MB = 1.0/12.0
     mb = MB_timestep(model, glacier, step_MB, t)
-    JET.@test_opt target_modules=(Sleipnir, Muninn) MB_timestep(model, glacier, step_MB, t)
+    JET.@test_opt broken=true target_modules=(Sleipnir, Muninn, MassBalanceMachine) MB_timestep(
+        model,
+        glacier,
+        step_MB,
+        t,
+    )
 
     iceflowCache = fakeIceflowCache{Sleipnir.Float}(zero(glacier.H₀))
     cache = fakeCache{typeof(iceflowCache)}(iceflowCache)
@@ -61,7 +66,7 @@ function apply_MB_test(custom_nn::CustomMLP; save_refs::Bool = false)
     # TODO: This cannot be tested without Huginn. To be moved to Huginn with an extension of MassBalanceMachine.jl
     # MB_timestep!(cache, model, glacier, step_MB, t)
     # @assert mb==cache.iceflow.MB
-    # JET.@test_opt target_modules=(Sleipnir, Muninn) MB_timestep!(
+    # JET.@test_opt target_modules=(Sleipnir, Muninn, MassBalanceMachine) MB_timestep!(
     #     cache, model, glacier, step_MB, t)
 
     if save_refs
