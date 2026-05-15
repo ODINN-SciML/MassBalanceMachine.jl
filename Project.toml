@@ -1,7 +1,7 @@
 name = "MassBalanceMachine"
 uuid = "01be3c3f-7f86-47d7-9d35-d52d1be8d668"
 authors = ["Jordi Bolibar"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
