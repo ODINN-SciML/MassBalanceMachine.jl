@@ -1,7 +1,7 @@
 name = "MassBalanceMachine"
 uuid = "01be3c3f-7f86-47d7-9d35-d52d1be8d668"
 authors = ["Jordi Bolibar"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -29,12 +29,12 @@ Infiltrator = "1"
 JLD2 = "0.6"
 JSON = "0.21, 1"
 Lux = "1"
-Muninn = "0.11"
+Muninn = "0.12"
 NCDatasets = "0.14"
 Pkg = "1.10, 1.11"
 Reexport = "1"
 Revise = "3"
-Sleipnir = "0.14"
+Sleipnir = "0.15"
 julia = "1.10, 1.11"
 
 [extras]
