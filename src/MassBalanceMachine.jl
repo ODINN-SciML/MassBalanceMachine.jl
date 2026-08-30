@@ -16,12 +16,12 @@ using Reexport
 # ############    PARAMETERS     ###############
 # ##############################################
 
-cd(@__DIR__)
-const global root_dir::String = dirname(Base.current_project())
+const src_dir::String = dirname(@__FILE__)
+const global root_dir::String = joinpath(src_dir, "..")
 
-include("MLP.jl")
-include("mass_balance_utils.jl")
-include("data_reader.jl")
-include("model_registry.jl")
+include(src_dir*"/MLP.jl")
+include(src_dir*"/mass_balance_utils.jl")
+include(src_dir*"/data_reader.jl")
+include(src_dir*"/model_registry.jl")
 
 end
