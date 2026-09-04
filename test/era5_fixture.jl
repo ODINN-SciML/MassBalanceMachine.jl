@@ -60,9 +60,9 @@ function ensure_synthetic_era5_fixture(rgi_paths::Dict, rgi_ids::Vector{String})
     fixture_root = mktempdir()
 
     for rgi_id in rgi_ids
-        rgi_path = joinpath(Sleipnir.prepro_dir, rgi_paths[rgi_id])
+        rgi_path = joinpath(Sleipnir.prepro_dir(), rgi_paths[rgi_id])
 
-        # Use a true temporary directory to avoid writing inside Sleipnir.prepro_dir.
+        # Use a true temporary directory to avoid writing inside Sleipnir.prepro_dir().
         # rgi_path is treated as STRICTLY READ-ONLY: nothing is ever deleted or written there.
         test_rgi_path = joinpath(fixture_root, rgi_id)
         mkpath(test_rgi_path)
