@@ -1,7 +1,7 @@
 name = "MassBalanceMachine"
 uuid = "01be3c3f-7f86-47d7-9d35-d52d1be8d668"
-authors = ["Jordi Bolibar"]
 version = "0.4.0"
+authors = ["Jordi Bolibar"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -21,7 +21,7 @@ Sleipnir = "f5e6c550-199f-11ee-3608-394420200519"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-CSV = "0.10"
+CSV = "0.10, 1"
 DataFrames = "1"
 Downloads = "1"
 Infiltrator = "1"
